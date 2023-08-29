@@ -1,2 +1,3 @@
-# cloin.prometheus
-Basic prometheus collection
+# Ansible Collection - cloin.prometheus
+
+Documentation for the collection.
