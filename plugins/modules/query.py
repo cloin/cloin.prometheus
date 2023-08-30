@@ -62,13 +62,11 @@ def sanitize_query(query):
 def main():
     argument_spec = {
         'prometheus_url': {'type': 'str', 'required': True},
-        'duration_seconds': {'type': 'int', 'default': 600},
         'queries': {'type': 'list', 'required': True}
     }
 
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
     prometheus_url = module.params['prometheus_url']
-    duration_seconds = module.params['duration_seconds']
     queries = module.params['queries']
 
     current_time = int(time.time())
