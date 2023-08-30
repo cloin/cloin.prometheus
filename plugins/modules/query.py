@@ -9,15 +9,9 @@ description:
 options:
     prometheus_url:
         description:
-            - The Prometheus API endpoint URL to fetch metrics.
+            - The URL of the prometheus host
         required: true
         type: str
-    duration_seconds:
-        description:
-            - The time duration in seconds for which to fetch metrics.
-            - Default is 600 seconds (10 minutes).
-        default: 600
-        type: int
     queries:
         description:
             - List of Prometheus metric queries to fetch.
