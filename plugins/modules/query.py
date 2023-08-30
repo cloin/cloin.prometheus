@@ -47,55 +47,46 @@ from ansible.module_utils.basic import AnsibleModule
 import time
 import requests
 
-def fetch_latest_metric_value(query, duration_seconds, prometheus_url):
-    """Fetch the latest metric value for a given query."""
-    current_time = int(time.time())
-    end_time = current_time
-    start_time = current_time - duration_seconds
-    params = {
-        'query': query,
-        'time': end_time
-    }
+PROMETHEUS_QUERY_API = '/api/v1/query'
+
+def fetch_latest_metric_value(query, end_time, prometheus_url):
+    params = {'query': query, 'time': end_time}
     try:
-        response = requests.get(f"{prometheus_url}/api/v1/query", params=params)
+        response = requests.get(f"{prometheus_url}{PROMETHEUS_QUERY_API}", params=params)
         response.raise_for_status()
         data = response.json()
-        if 'data' in data and 'result' in data['data']:
-            metric_data = data['data']['result']
-            if metric_data:
-                # Explicitly convert to float
-                return float(metric_data[0]['value'][1]) if metric_data else None
-        else:
-            return None
-    except Exception as e:
+        metric_data = data.get('data', {}).get('result', [])
+        if metric_data:
+            return float(metric_data[0]['value'][1])
+        return None
+    except requests.RequestException as e:
         raise e
+
+def sanitize_query(query):
+    return query.replace(":", "_").replace(".", "_")
 
 def main():
     argument_spec = {
-        'prometheus_url': dict(type='str', required=True),
-        'duration_seconds': dict(type='int', default=600),
-        'queries': dict(type='list', required=True)
+        'prometheus_url': {'type': 'str', 'required': True},
+        'duration_seconds': {'type': 'int', 'default': 600},
+        'queries': {'type': 'list', 'required': True}
     }
 
-    module = AnsibleModule(
-        argument_spec=argument_spec,
-        supports_check_mode=True
-    )
-
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
     prometheus_url = module.params['prometheus_url']
     duration_seconds = module.params['duration_seconds']
     queries = module.params['queries']
+
+    current_time = int(time.time())
+    end_time = current_time
 
     metrics_data = {}
 
     for query in queries:
         try:
-            latest_value = fetch_latest_metric_value(query, duration_seconds, prometheus_url)
-            if latest_value is not None:
-                sanitized_query = query.replace(":", "_").replace(".", "_")
-                metrics_data[sanitized_query] = latest_value
-            else:
-                metrics_data[query] = "No data available for the specified time range."
+            latest_value = fetch_latest_metric_value(query, end_time, prometheus_url)
+            key = sanitize_query(query) if latest_value is not None else query
+            metrics_data[key] = latest_value if latest_value is not None else "No data available for the specified time range."
         except Exception as e:
             module.fail_json(msg=str(e))
 
